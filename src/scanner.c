@@ -1,5 +1,4 @@
 #include "scanner.h"
-#include "common.h"
 #include "memory.h"
 #include "token.h"
 #include <string.h>
@@ -8,19 +7,14 @@ typedef struct {
   const char *start;
   const char *current;
   int line;
-  TokenArray *tokens;
 } Scanner;
 
 Scanner scanner;
-TokenArray tokens;
 
 void init_scanner(const char *source) {
   scanner.start = source;
   scanner.current = source;
   scanner.line = 1;
-
-  init_token_array(&tokens);
-  scanner.tokens = &tokens;
 }
 
 static Token make_token(TokenType type) {
@@ -211,10 +205,11 @@ static Token scan_token() {
   return make_token(TOKEN_ERROR);
 }
 
-void scan() {
+void scan(const char *source, TokenArray *tokens) {
+  init_scanner(source);
   for (;;) {
     Token token = scan_token();
-    DYN_ARR_PUSH(Token, scanner.tokens, token);
+    DYN_ARR_PUSH(Token, tokens, token);
     print_token(token);
     if (token.type == TOKEN_EOF)
       return;

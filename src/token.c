@@ -94,7 +94,7 @@ static char *token_type_string(TokenType type) {
 }
 
 void print_token(Token token) {
-  char lexeme[token.length];
+  char lexeme[token.length + 1];
   strncpy(lexeme, token.start, token.length);
   lexeme[token.length] = '\0';
   if (token.type == TOKEN_NEWLINE) {
