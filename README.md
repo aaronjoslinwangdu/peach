@@ -11,11 +11,7 @@
 - garbage collected
 - data types: nil, num, str, bool, enum, map,
 
-## Syntax
-
-### Grammar
-
-### Examples
+## Examples
 
 ```
 a = 1                       // variable a matched with 1
