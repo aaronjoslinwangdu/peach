@@ -1,5 +1,5 @@
-#ifndef _lang_debug_c
-#define _lang_debug_c
+#ifndef _LANG_DEBUG_H
+#define _LANG_DEBUG_H
 
 #include "scanner.h"
 

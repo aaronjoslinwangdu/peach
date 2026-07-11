@@ -1,5 +1,5 @@
-#ifndef _lang_scanner_c
-#define _lang_scanner_c
+#ifndef _LANG_SCANNER_H
+#define _LANG_SCANNER_H
 
 #include "token.h"
 

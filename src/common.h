@@ -1,5 +1,5 @@
-#ifndef _lang_common_c
-#define _lang_common_c
+#ifndef _LANG_COMMON_H
+#define _LANG_COMMON_H
 
 #define _LANG_DEBUG_SCANNER
 

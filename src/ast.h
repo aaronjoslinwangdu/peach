@@ -1,5 +1,5 @@
-#ifndef _lang_ast_c
-#define _lang_ast_c
+#ifndef _LANG_AST_H
+#define _LANG_AST_H
 
 #include "common.h"
 #include "token.h"

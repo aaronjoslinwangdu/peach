@@ -1,5 +1,5 @@
-#ifndef _lang_token_h
-#define _lang_token_h
+#ifndef _LANG_TOKEN_H
+#define _LANG_TOKEN_H
 
 typedef enum {
   // one char
