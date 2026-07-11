@@ -63,12 +63,12 @@ typedef struct Expr {
   } as;
 } Expr;
 
-Expr *new_group(int line, Expr *expr);
-Expr *new_block(int line, Expr **exprs);
-Expr *new_call(int line, Expr *name, Expr **args);
-Expr *new_unary(int line, TokenType op, Expr *expr);
-Expr *new_binary(int line, TokenType op, Expr *left, Expr *right);
-Expr *new_var(int line, const char *start, int length);
-Expr *new_string(int line, const char *start, int length);
+typedef struct {
+  int count;
+  int capacity;
+  Expr *entries;
+} ExprArray;
+
+void init_expr_array(ExprArray *exprs);
 
 #endif

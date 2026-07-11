@@ -210,7 +210,7 @@ void scan(const char *source, TokenArray *tokens) {
     Token token = scan_token();
     DYN_ARR_PUSH(Token, tokens, token);
     if (token.type == TOKEN_NEWLINE)
-      scanner.current++;
+      scanner.line++;
 #ifdef _LANG_DEBUG_SCANNER
     print_token(&token);
 #endif

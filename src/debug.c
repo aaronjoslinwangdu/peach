@@ -1,5 +1,4 @@
 #include "debug.h"
-#include "scanner.h"
 #include <stdio.h>
 
 void print_token(Token *token) {
@@ -119,4 +118,43 @@ void print_token(Token *token) {
     printf("lexeme = '%.*s', ", token->length, token->start);
   }
   printf("line = %04d }\n", token->line);
+}
+
+void print_expr(Expr *expr) {
+  printf("Expr = { ");
+  const char *type;
+  switch (expr->type) {
+  case EXPR_UNARY:
+    type = "UNARY";
+    break;
+  case EXPR_BINARY:
+    type = "BINARY";
+    break;
+  case EXPR_GROUP:
+    type = "GROUP";
+    break;
+  case EXPR_BLOCK:
+    type = "BLOCK";
+    break;
+  case EXPR_CALL:
+    type = "CALL";
+    break;
+  case EXPR_VAR:
+    type = "VAR";
+    break;
+  case EXPR_STRING:
+    type = "STRING";
+    break;
+  case EXPR_NUMBER:
+    type = "NUMBER";
+    break;
+  case EXPR_BOOLEAN:
+    type = "BOOLEAN";
+    break;
+  case EXPR_NIL:
+    type = "NIL";
+    break;
+  }
+  printf("type = %s, ", type);
+  printf("line = %04d }\n", expr->line);
 }

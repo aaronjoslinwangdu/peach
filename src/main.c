@@ -1,3 +1,4 @@
+#include "parser.h"
 #include "scanner.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +15,17 @@ void repl() {
     }
 
     TokenArray tokens;
+    printf("made tokens\n");
     init_token_array(&tokens);
+    printf("init'd tokens\n");
     scan(input, &tokens);
+    printf("scanned tokens\n");
+    ExprArray exprs;
+    printf("made exprs\n");
+    init_expr_array(&exprs);
+    printf("init'd exprs\n");
+    parse(&tokens, &exprs);
+    printf("parsed\n");
   }
 }
 
@@ -42,6 +52,9 @@ void run_file(const char *path) {
   TokenArray tokens;
   init_token_array(&tokens);
   scan(source, &tokens);
+  ExprArray exprs;
+  init_expr_array(&exprs);
+  parse(&tokens, &exprs);
 }
 
 int main(int argc, char **argv) {

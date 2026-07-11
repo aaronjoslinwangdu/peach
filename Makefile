@@ -14,4 +14,4 @@ build/%.o: src/%.c
 clean:
 	rm -rf build
 
--include $(OBJECTS:o=.d)
+-include $(OBJECTS:.o=.d)

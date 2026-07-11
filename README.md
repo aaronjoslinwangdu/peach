@@ -49,7 +49,7 @@ n = 5                       // pipe operator argument passing
 ```
 keyword     -> "fn" | "true" | "false" | "nil"
 
-expression  -> ident | literal | unary | binary | group | block | call | conditional
+expression  -> literal | unary | binary | group | block | call | conditional
 
 block       -> "{" expression "}"
 group       -> "(" expression ")"
@@ -57,5 +57,5 @@ call        -> fn "(" (expression)* ")"
 unary       -> ("-" | "!") expression
 binary      -> expression operator expression
 operator    -> ">" | ">=" | "<" | "<=" | "=" | "!=" | "==" | "+" | "-" | "*" | "/"
-literal     -> number | string | "true" | "false" | "nil" | map | tuple | list
+literal     -> ident | number | string | "true" | "false" | "nil" | map | tuple | list
 ```
