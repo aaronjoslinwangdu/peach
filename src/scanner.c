@@ -183,8 +183,16 @@ static Token scan_token() {
     return make_token(TOKEN_STAR);
   case '/':
     return make_token(TOKEN_SLASH);
+  case '&':
+    return match('&') ? make_token(TOKEN_AND) : make_token(TOKEN_ERROR);
   case '|':
-    return match('>') ? make_token(TOKEN_PIPE) : make_token(TOKEN_ERROR);
+    if (match('>')) {
+      return make_token(TOKEN_PIPE);
+    }
+    if (match('|')) {
+      return make_token(TOKEN_OR);
+    }
+    return make_token(TOKEN_ERROR);
   case '<':
     return match('=') ? make_token(TOKEN_LESS_EQUAL) : make_token(TOKEN_LESS);
   case '>':

@@ -144,6 +144,19 @@ void print_expr(Expr *expr, int indent) {
       print_expr(block.exprs->entries[i], indent + 2);
     }
     printf("%*s}\n", indent, "");
+    return;
+  }
+  case EXPR_FUNCTION: {
+    Function function = expr->as.function;
+    printf("type = FUNCTION, arity = %d,\n", function.arity);
+    for (int i = 0; i < function.params->count; i++) {
+      printf("%*sparam = ", indent + 2, "");
+      print_expr(function.params->entries[i], indent + 2);
+    }
+    printf("%*sbody = ", indent + 2, "");
+    print_expr(function.body, indent + 2);
+    printf("%*s}\n", indent, "");
+    return;
   }
   }
 }

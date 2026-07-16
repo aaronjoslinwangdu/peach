@@ -9,6 +9,7 @@ typedef enum {
   EXPR_BLOCK,
   EXPR_GROUPING,
   EXPR_UNARY,
+  EXPR_FUNCTION,
   EXPR_BINARY,
   EXPR_CALL,
   EXPR_VAR,
@@ -53,12 +54,19 @@ typedef struct {
   Expr *left, *right;
 } Binary;
 
+typedef struct {
+  ExprArray *params;
+  Expr *body;
+  int arity;
+} Function;
+
 typedef struct Expr {
   ExprType type;
   int line;
   union {
     Grouping grouping;
     Block block;
+    Function function;
     Call call;
     Unary unary;
     Binary binary;
@@ -69,16 +77,18 @@ typedef struct Expr {
   } as;
 } Expr;
 
-Expr *make_nil(Arena *arena, int line);
-Expr *make_boolean(Arena *arena, int line, bool value);
-Expr *make_number(Arena *arena, int line, double value);
-Expr *make_var(Arena *arena, int line, char *start, int length);
-Expr *make_string(Arena *arena, int line, char *start, int length);
-Expr *make_unary(Arena *arena, int line, TokenType op, Expr *left);
-Expr *make_binary(Arena *arena, int line, TokenType op, Expr *left,
+Expr *init_nil(Arena *arena, int line);
+Expr *init_boolean(Arena *arena, int line, bool value);
+Expr *init_number(Arena *arena, int line, double value);
+Expr *init_var(Arena *arena, int line, char *start, int length);
+Expr *init_string(Arena *arena, int line, char *start, int length);
+Expr *init_unary(Arena *arena, int line, TokenType op, Expr *left);
+Expr *init_binary(Arena *arena, int line, TokenType op, Expr *left,
                   Expr *right);
-Expr *make_grouping(Arena *arena, int line, Expr *expr);
-Expr *make_block(Arena *arena, int line, ExprArray *exprs);
+Expr *init_grouping(Arena *arena, int line, Expr *expr);
+Expr *init_block(Arena *arena, int line, ExprArray *exprs);
+Expr *init_function(Arena *arena, int line, ExprArray *params, Expr *body,
+                    int arity);
 
 void init_expr_array(ExprArray *exprs);
 
