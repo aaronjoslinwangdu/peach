@@ -14,221 +14,239 @@ typedef struct {
   bool has_error;
 } Parser;
 
-static void init_parser(Parser *parser, TokenArray *tokens, Arena *arena) {
-  parser->current = 0;
-  parser->tokens = tokens;
-  parser->arena = arena;
-  parser->has_error = false;
+static void init_parser(Parser *p, TokenArray *tokens, Arena *arena) {
+  p->current = 0;
+  p->tokens = tokens;
+  p->arena = arena;
+  p->has_error = false;
 }
 
-static Token previous(Parser *parser) {
-  return parser->tokens->entries[parser->current - 1];
+static Token previous(Parser *p) { return p->tokens->entries[p->current - 1]; }
+
+static Token peek(Parser *p) { return p->tokens->entries[p->current]; }
+
+static bool is_end(Parser *p) { return peek(p).type == TOKEN_EOF; }
+
+static Token advance(Parser *p) {
+  if (!is_end(p))
+    p->current++;
+  return previous(p);
 }
 
-static Token peek(Parser *parser) {
-  return parser->tokens->entries[parser->current];
-}
-
-static bool is_end(Parser *parser) { return peek(parser).type == TOKEN_EOF; }
-
-static Token advance(Parser *parser) {
-  if (!is_end(parser))
-    parser->current++;
-  return previous(parser);
-}
-
-static bool check(Parser *parser, TokenType type) {
-  if (is_end(parser))
+static bool check(Parser *p, TokenType type) {
+  if (is_end(p))
     return false;
-  return peek(parser).type == type;
+  return peek(p).type == type;
 }
 
-static bool match(Parser *parser, TokenType type) {
-  if (check(parser, type)) {
-    advance(parser);
+static bool match(Parser *p, TokenType type) {
+  if (check(p, type)) {
+    advance(p);
     return true;
   }
   return false;
 }
 
-static void consume(Parser *parser, TokenType type, const char *error_message) {
-  if (!match(parser, type)) {
+static void consume_delim(Parser *p) {
+  switch (peek(p).type) {
+  case TOKEN_RIGHT_BRACE:
+  case TOKEN_EOF:
+    return;
+  case TOKEN_DELIM:
+    advance(p);
+    return;
+  default: {
+    Token t = peek(p);
+    // TODO: unwind error here, don't exit
+    fprintf(stderr, "%s\n", "Expected delimiter.");
+    print_token(&t);
+    exit(EXIT_FAILURE);
+  }
+  }
+}
+
+static void consume(Parser *p, TokenType type, const char *error_message) {
+  if (!match(p, type)) {
+    Token t = peek(p);
     // TODO: unwind error here, don't exit
     fprintf(stderr, "%s\n", error_message);
+    print_token(&t);
     exit(EXIT_FAILURE);
   }
 }
 
-static Expr *expression(Parser *parser);
+static Expr *expression(Parser *p);
 
-static Expr *literal(Parser *parser) {
-  Token cur = peek(parser);
+static Expr *literal(Parser *p) {
+  Token cur = peek(p);
 
-  if (match(parser, TOKEN_TRUE)) {
-    return init_boolean(parser->arena, cur.line, true);
+  if (match(p, TOKEN_TRUE)) {
+    return init_boolean(p->arena, cur.line, true);
   }
-  if (match(parser, TOKEN_FALSE)) {
-    return init_boolean(parser->arena, cur.line, false);
+  if (match(p, TOKEN_FALSE)) {
+    return init_boolean(p->arena, cur.line, false);
   }
-  if (match(parser, TOKEN_NUMBER)) {
+  if (match(p, TOKEN_NUMBER)) {
     double num = strtod(cur.start, NULL);
-    return init_number(parser->arena, cur.line, num);
+    return init_number(p->arena, cur.line, num);
   }
-  if (match(parser, TOKEN_STRING)) {
-    return init_string(parser->arena, cur.line, (char *)cur.start, cur.length);
+  if (match(p, TOKEN_STRING)) {
+    return init_string(p->arena, cur.line, (char *)cur.start, cur.length);
   }
-  if (match(parser, TOKEN_LEFT_PAREN)) {
-    Expr *expr = expression(parser);
-    consume(parser, TOKEN_RIGHT_PAREN, "Expect ')'.");
-    return init_grouping(parser->arena, cur.line, expr);
+  if (match(p, TOKEN_LEFT_PAREN)) {
+    Expr *expr = expression(p);
+    consume(p, TOKEN_RIGHT_PAREN, "Expect ')'.");
+    return init_grouping(p->arena, cur.line, expr);
   }
   // TODO: list
   // TODO: tuple
   // TODO: map
-  if (match(parser, TOKEN_IDENTIFIER)) {
-    return init_var(parser->arena, cur.line, (char *)cur.start, cur.length);
+  if (match(p, TOKEN_IDENTIFIER)) {
+    return init_var(p->arena, cur.line, (char *)cur.start, cur.length);
   }
-  if (match(parser, TOKEN_NIL)) {
-    return init_nil(parser->arena, cur.line);
+  if (match(p, TOKEN_NIL)) {
+    return init_nil(p->arena, cur.line);
   }
 
   // TODO: unwind error here, don't exit
   fprintf(stderr, "%s\n", "Failed to match identifier.");
+  print_token(&cur);
   exit(EXIT_FAILURE);
 }
 
-static Expr *unary(Parser *parser) {
-  if (match(parser, TOKEN_MINUS) || match(parser, TOKEN_BANG)) {
-    Token prev = previous(parser);
-    Expr *expr = unary(parser);
-    return init_unary(parser->arena, prev.line, prev.type, expr);
+static Expr *unary(Parser *p) {
+  if (match(p, TOKEN_MINUS) || match(p, TOKEN_BANG)) {
+    Token prev = previous(p);
+    Expr *expr = unary(p);
+    return init_unary(p->arena, prev.line, prev.type, expr);
   }
-  return literal(parser);
+  return literal(p);
 }
 
-static Expr *pattern_match(Parser *parser) {
-  Expr *expr = unary(parser);
-  if (match(parser, TOKEN_EQUAL)) {
-    int line = previous(parser).line;
-    Expr *right = unary(parser);
-    expr = init_binary(parser->arena, line, TOKEN_EQUAL, expr, right);
-  }
-  return expr;
-}
-
-static Expr *factor(Parser *parser) {
-  Expr *expr = pattern_match(parser);
-  while (match(parser, TOKEN_STAR) || match(parser, TOKEN_SLASH)) {
-    Token prev = previous(parser);
-    Expr *right = pattern_match(parser);
-    expr = init_binary(parser->arena, prev.line, prev.type, expr, right);
+static Expr *pattern_match(Parser *p) {
+  Expr *expr = unary(p);
+  if (match(p, TOKEN_EQUAL)) {
+    int line = previous(p).line;
+    Expr *right = unary(p);
+    expr = init_binary(p->arena, line, TOKEN_EQUAL, expr, right);
   }
   return expr;
 }
 
-static Expr *term(Parser *parser) {
-  Expr *expr = factor(parser);
-  while (match(parser, TOKEN_PLUS) || match(parser, TOKEN_MINUS)) {
-    Token prev = previous(parser);
-    Expr *right = factor(parser);
-    expr = init_binary(parser->arena, prev.line, prev.type, expr, right);
+static Expr *factor(Parser *p) {
+  Expr *expr = pattern_match(p);
+  while (match(p, TOKEN_STAR) || match(p, TOKEN_SLASH)) {
+    Token prev = previous(p);
+    Expr *right = pattern_match(p);
+    expr = init_binary(p->arena, prev.line, prev.type, expr, right);
   }
   return expr;
 }
 
-static Expr *comparison(Parser *parser) {
-  Expr *expr = term(parser);
-  while (match(parser, TOKEN_LESS) || match(parser, TOKEN_LESS_EQUAL) ||
-         match(parser, TOKEN_GREATER) || match(parser, TOKEN_GREATER_EQUAL)) {
-    Token prev = previous(parser);
-    Expr *right = term(parser);
-    expr = init_binary(parser->arena, prev.line, prev.type, expr, right);
+static Expr *term(Parser *p) {
+  Expr *expr = factor(p);
+  while (match(p, TOKEN_PLUS) || match(p, TOKEN_MINUS)) {
+    Token prev = previous(p);
+    Expr *right = factor(p);
+    expr = init_binary(p->arena, prev.line, prev.type, expr, right);
   }
   return expr;
 }
 
-static Expr *equality(Parser *parser) {
-  Expr *expr = comparison(parser);
-  while (match(parser, TOKEN_EQUAL_EQUAL) || match(parser, TOKEN_BANG_EQUAL)) {
-    Token prev = previous(parser);
-    Expr *right = comparison(parser);
-    expr = init_binary(parser->arena, prev.line, prev.type, expr, right);
+static Expr *comparison(Parser *p) {
+  Expr *expr = term(p);
+  while (match(p, TOKEN_LESS) || match(p, TOKEN_LESS_EQUAL) ||
+         match(p, TOKEN_GREATER) || match(p, TOKEN_GREATER_EQUAL)) {
+    Token prev = previous(p);
+    Expr *right = term(p);
+    expr = init_binary(p->arena, prev.line, prev.type, expr, right);
   }
   return expr;
 }
 
-static Expr *_and(Parser *parser) {
-  Expr *expr = equality(parser);
-  while (match(parser, TOKEN_AND)) {
-    Expr *right = equality(parser);
-    expr = init_binary(parser->arena, previous(parser).line, TOKEN_AND, expr,
-                       right);
+static Expr *equality(Parser *p) {
+  Expr *expr = comparison(p);
+  while (match(p, TOKEN_EQUAL_EQUAL) || match(p, TOKEN_BANG_EQUAL)) {
+    Token prev = previous(p);
+    Expr *right = comparison(p);
+    expr = init_binary(p->arena, prev.line, prev.type, expr, right);
   }
   return expr;
 }
 
-static Expr *_or(Parser *parser) {
-  Expr *expr = _and(parser);
-  while (match(parser, TOKEN_OR)) {
-    Expr *right = _and(parser);
-    expr = init_binary(parser->arena, previous(parser).line, TOKEN_OR, expr,
-                       right);
+static Expr *_and(Parser *p) {
+  Expr *expr = equality(p);
+  while (match(p, TOKEN_AND)) {
+    Expr *right = equality(p);
+    expr = init_binary(p->arena, previous(p).line, TOKEN_AND, expr, right);
   }
   return expr;
 }
 
-static Expr *block(Parser *parser) {
-  if (match(parser, TOKEN_LEFT_BRACE)) {
-    int line = previous(parser).line;
-    ExprArray *exprs = arena_allocate(parser->arena, sizeof(*exprs));
+static Expr *_or(Parser *p) {
+  Expr *expr = _and(p);
+  while (match(p, TOKEN_OR)) {
+    Expr *right = _and(p);
+    expr = init_binary(p->arena, previous(p).line, TOKEN_OR, expr, right);
+  }
+  return expr;
+}
+
+static Expr *block(Parser *p) {
+  if (match(p, TOKEN_LEFT_BRACE)) {
+    int line = previous(p).line;
+    consume_delim(p);
+    ExprArray *exprs = arena_allocate(p->arena, sizeof(*exprs));
     init_expr_array(exprs);
-    while (!match(parser, TOKEN_RIGHT_BRACE)) {
-      if (is_end(parser)) {
+    while (!match(p, TOKEN_RIGHT_BRACE)) {
+      if (is_end(p)) {
         // TODO: unwind error here, don't exit
         fprintf(stderr, "%s\n", "Expect '}'.");
         exit(EXIT_FAILURE);
       }
-      Expr *expr = expression(parser);
+      Expr *expr = expression(p);
       DYN_ARR_PUSH(Expr *, exprs, expr);
+      consume_delim(p);
     }
-    return init_block(parser->arena, line, exprs);
+    return init_block(p->arena, line, exprs);
   }
-  return _or(parser);
+  return _or(p);
 }
 
-static Expr *function(Parser *parser) {
-  if (match(parser, TOKEN_FUNCTION)) {
-    int line = previous(parser).line;
-    consume(parser, TOKEN_LEFT_PAREN, "Expect '('.");
-    ExprArray *params = arena_allocate(parser->arena, sizeof(*params));
+static Expr *function(Parser *p) {
+  if (match(p, TOKEN_FUNCTION)) {
+    int line = previous(p).line;
+    consume(p, TOKEN_LEFT_PAREN, "Expect '('.");
+    ExprArray *params = arena_allocate(p->arena, sizeof(*params));
     init_expr_array(params);
     int arity = 0;
-    while (!match(parser, TOKEN_RIGHT_PAREN)) {
-      if (is_end(parser)) {
+    while (!match(p, TOKEN_RIGHT_PAREN)) {
+      if (is_end(p)) {
         // TODO: unwind error here, don't exit
         fprintf(stderr, "%s\n", "Expect ')'.");
         exit(EXIT_FAILURE);
       }
       arity += 1;
-      Expr *param = unary(parser);
+      Expr *param = unary(p);
       DYN_ARR_PUSH(Expr *, params, param);
-      if (!check(parser, TOKEN_RIGHT_PAREN))
-        consume(parser, TOKEN_COMMA, "Expect ','.");
+      if (!check(p, TOKEN_RIGHT_PAREN))
+        consume(p, TOKEN_COMMA, "Expect ','.");
     }
-    consume(parser, TOKEN_ARROW, "Expect '->'.");
-    Expr *body = block(parser);
-    return init_function(parser->arena, line, params, body, arity);
+    consume(p, TOKEN_ARROW, "Expect '->'.");
+    Expr *body = block(p);
+    return init_function(p->arena, line, params, body, arity);
   }
-  return block(parser);
+  return block(p);
 }
 
-static Expr *expression(Parser *parser) { return function(parser); }
+static Expr *expression(Parser *p) { return function(p); }
 
 void parse(TokenArray *tokens, Arena *arena) {
   Parser parser;
   init_parser(&parser, tokens, arena);
   while (!is_end(&parser)) {
     Expr *expr = expression(&parser);
+    consume_delim(&parser);
 #ifdef _PEACH_DEBUG_PARSER
     print_expr(expr, 0);
 #endif

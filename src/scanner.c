@@ -8,6 +8,7 @@ typedef struct {
   const char *start;
   const char *current;
   int line;
+  bool insert_delim;
 } Scanner;
 
 Scanner scanner;
@@ -16,6 +17,7 @@ void init_scanner(const char *source) {
   scanner.start = source;
   scanner.current = source;
   scanner.line = 1;
+  scanner.insert_delim = false;
 }
 
 static Token make_token(TokenType type) {
@@ -68,8 +70,10 @@ static Token string() {
   for (;;) {
     if (is_end())
       return make_token(TOKEN_ERROR);
-    if (advance() == '"')
+    if (advance() == '"') {
+      scanner.insert_delim = true;
       return make_token(TOKEN_STRING);
+    }
   }
 }
 
@@ -85,6 +89,7 @@ static Token digit() {
     }
   }
 
+  scanner.insert_delim = true;
   return make_token(TOKEN_NUMBER);
 }
 
@@ -117,7 +122,19 @@ static Token identifier() {
   while (is_alpha(peek()) || is_digit(peek())) {
     advance();
   }
-  return make_token(identifier_type());
+  TokenType type = identifier_type();
+  switch (type) {
+  case TOKEN_IDENTIFIER:
+  case TOKEN_TRUE:
+  case TOKEN_FALSE:
+  case TOKEN_NIL:
+    scanner.insert_delim = true;
+    break;
+  default:
+    scanner.insert_delim = false;
+    break;
+  }
+  return make_token(type);
 }
 
 static void skip_whitespace() {
@@ -128,10 +145,6 @@ static void skip_whitespace() {
     case '\r':
       advance();
       break;
-    case '\n':
-      scanner.line++;
-      advance();
-      break;
     case '/':
       if (peek_next() == '/') {
         while (peek() != '\n' && !is_end()) {
@@ -140,7 +153,13 @@ static void skip_whitespace() {
       } else {
         return;
       }
-      return;
+      break;
+    case '\n':
+      if (scanner.insert_delim)
+        return;
+      scanner.line++;
+      advance();
+      break;
     default:
       return;
     }
@@ -162,29 +181,33 @@ static Token scan_token() {
     return identifier();
   }
 
+  scanner.insert_delim = false;
   switch (c) {
   case '(':
     return make_token(TOKEN_LEFT_PAREN);
   case ')':
+    scanner.insert_delim = true;
     return make_token(TOKEN_RIGHT_PAREN);
   case '{':
     return make_token(TOKEN_LEFT_BRACE);
   case '}':
+    scanner.insert_delim = true;
     return make_token(TOKEN_RIGHT_BRACE);
   case '[':
     return make_token(TOKEN_LEFT_BRACKET);
   case ']':
+    scanner.insert_delim = true;
     return make_token(TOKEN_RIGHT_BRACKET);
   case '+':
     return make_token(TOKEN_PLUS);
   case '-':
-    return match('>') ? make_token(TOKEN_ARROW) : make_token(TOKEN_MINUS);
+    return make_token(match('>') ? TOKEN_ARROW : TOKEN_MINUS);
   case '*':
     return make_token(TOKEN_STAR);
   case '/':
     return make_token(TOKEN_SLASH);
   case '&':
-    return match('&') ? make_token(TOKEN_AND) : make_token(TOKEN_ERROR);
+    return make_token(match('&') ? TOKEN_AND : TOKEN_ERROR);
   case '|':
     if (match('>')) {
       return make_token(TOKEN_PIPE);
@@ -194,14 +217,13 @@ static Token scan_token() {
     }
     return make_token(TOKEN_ERROR);
   case '<':
-    return match('=') ? make_token(TOKEN_LESS_EQUAL) : make_token(TOKEN_LESS);
+    return make_token(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
   case '>':
-    return match('=') ? make_token(TOKEN_GREATER_EQUAL)
-                      : make_token(TOKEN_GREATER);
+    return make_token(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
   case '!':
-    return match('=') ? make_token(TOKEN_BANG_EQUAL) : make_token(TOKEN_BANG);
+    return make_token(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
   case '=':
-    return match('=') ? make_token(TOKEN_EQUAL_EQUAL) : make_token(TOKEN_EQUAL);
+    return make_token(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
   case ',':
     return make_token(TOKEN_COMMA);
   case '.':
@@ -210,6 +232,12 @@ static Token scan_token() {
     return make_token(TOKEN_COLON);
   case '"':
     return string();
+  case '\n': {
+    scanner.insert_delim = false;
+    Token token = make_token(TOKEN_DELIM);
+    scanner.line++;
+    return token;
+  }
   }
   return make_token(TOKEN_ERROR);
 }

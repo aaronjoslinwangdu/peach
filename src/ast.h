@@ -77,17 +77,16 @@ typedef struct Expr {
   } as;
 } Expr;
 
-Expr *init_nil(Arena *arena, int line);
-Expr *init_boolean(Arena *arena, int line, bool value);
-Expr *init_number(Arena *arena, int line, double value);
-Expr *init_var(Arena *arena, int line, char *start, int length);
-Expr *init_string(Arena *arena, int line, char *start, int length);
-Expr *init_unary(Arena *arena, int line, TokenType op, Expr *left);
-Expr *init_binary(Arena *arena, int line, TokenType op, Expr *left,
-                  Expr *right);
-Expr *init_grouping(Arena *arena, int line, Expr *expr);
-Expr *init_block(Arena *arena, int line, ExprArray *exprs);
-Expr *init_function(Arena *arena, int line, ExprArray *params, Expr *body,
+Expr *init_nil(Arena *a, int line);
+Expr *init_boolean(Arena *a, int line, bool value);
+Expr *init_number(Arena *a, int line, double value);
+Expr *init_var(Arena *a, int line, char *start, int length);
+Expr *init_string(Arena *a, int line, char *start, int length);
+Expr *init_unary(Arena *a, int line, TokenType op, Expr *left);
+Expr *init_binary(Arena *a, int line, TokenType op, Expr *left, Expr *right);
+Expr *init_grouping(Arena *a, int line, Expr *expr);
+Expr *init_block(Arena *a, int line, ExprArray *exprs);
+Expr *init_function(Arena *a, int line, ExprArray *params, Expr *body,
                     int arity);
 
 void init_expr_array(ExprArray *exprs);

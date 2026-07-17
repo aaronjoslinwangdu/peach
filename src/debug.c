@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "ast.h"
+#include "token.h"
 
 #include <stdio.h>
 
@@ -77,13 +78,19 @@ char *printable_token_type(TokenType type) {
     return "OR";
   case TOKEN_AND:
     return "AND";
+  case TOKEN_DELIM:
+    return "DELIM";
   }
 }
 
 void print_token(Token *token) {
   printf("Token { ");
   printf("type = %12s, ", printable_token_type(token->type));
-  printf("lexeme = '%.*s', ", token->length, token->start);
+  if (token->type != TOKEN_DELIM) {
+    printf("lexeme = '%.*s', ", token->length, token->start);
+  } else {
+    printf("lexeme = ';', ");
+  }
   printf("line = %d }\n", token->line);
 }
 
