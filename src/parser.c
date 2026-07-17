@@ -123,21 +123,11 @@ static Expr *unary(Parser *p) {
   return literal(p);
 }
 
-static Expr *pattern_match(Parser *p) {
-  Expr *expr = unary(p);
-  if (match(p, TOKEN_EQUAL)) {
-    int line = previous(p).line;
-    Expr *right = unary(p);
-    expr = init_binary(p->arena, line, TOKEN_EQUAL, expr, right);
-  }
-  return expr;
-}
-
 static Expr *factor(Parser *p) {
-  Expr *expr = pattern_match(p);
+  Expr *expr = unary(p);
   while (match(p, TOKEN_STAR) || match(p, TOKEN_SLASH)) {
     Token prev = previous(p);
-    Expr *right = pattern_match(p);
+    Expr *right = unary(p);
     expr = init_binary(p->arena, prev.line, prev.type, expr, right);
   }
   return expr;
@@ -195,7 +185,6 @@ static Expr *_or(Parser *p) {
 static Expr *block(Parser *p) {
   if (match(p, TOKEN_LEFT_BRACE)) {
     int line = previous(p).line;
-    consume_delim(p);
     ExprArray *exprs = arena_allocate(p->arena, sizeof(*exprs));
     init_expr_array(exprs);
     while (!match(p, TOKEN_RIGHT_BRACE)) {
@@ -239,16 +228,26 @@ static Expr *function(Parser *p) {
   return block(p);
 }
 
-static Expr *expression(Parser *p) { return function(p); }
+static Expr *pattern_match(Parser *p) {
+  Expr *expr = function(p);
+  if (match(p, TOKEN_EQUAL)) {
+    int line = previous(p).line;
+    Expr *right = function(p);
+    expr = init_binary(p->arena, line, TOKEN_EQUAL, expr, right);
+  }
+  return expr;
+}
+
+static Expr *expression(Parser *p) { return pattern_match(p); }
 
 void parse(TokenArray *tokens, Arena *arena) {
   Parser parser;
   init_parser(&parser, tokens, arena);
   while (!is_end(&parser)) {
     Expr *expr = expression(&parser);
-    consume_delim(&parser);
 #ifdef _PEACH_DEBUG_PARSER
     print_expr(expr, 0);
 #endif
+    consume_delim(&parser);
   }
 };
