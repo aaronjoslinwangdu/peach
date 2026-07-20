@@ -40,8 +40,8 @@ typedef struct {
 } Var;
 
 typedef struct {
-  Var *name;
-  Expr **args;
+  Expr *callee;
+  ExprArray *args;
 } Call;
 
 typedef struct {
@@ -88,6 +88,7 @@ Expr *init_grouping(Arena *a, int line, Expr *expr);
 Expr *init_block(Arena *a, int line, ExprArray *exprs);
 Expr *init_function(Arena *a, int line, ExprArray *params, Expr *body,
                     int arity);
+Expr *init_call(Arena *a, int line, Expr *callee, ExprArray *args);
 
 void init_expr_array(ExprArray *exprs);
 

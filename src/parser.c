@@ -182,6 +182,33 @@ static Expr *_or(Parser *p) {
   return expr;
 }
 
+static Expr *call(Parser *p) {
+  Expr *expr = _or(p);
+  for (;;) {
+    if (match(p, TOKEN_LEFT_PAREN)) {
+      int line = previous(p).line;
+      ExprArray *args = arena_allocate(p->arena, sizeof(*args));
+      init_expr_array(args);
+      while (!match(p, TOKEN_RIGHT_PAREN)) {
+        if (is_end(p)) {
+          // TODO: unwind error here, don't exit
+          fprintf(stderr, "%s\n", "Expect ')'.");
+          exit(EXIT_FAILURE);
+        }
+        Expr *arg = unary(p);
+        DYN_ARR_PUSH(Expr *, args, arg);
+        if (!check(p, TOKEN_RIGHT_PAREN))
+          consume(p, TOKEN_COMMA, "Expect ','.");
+      }
+      expr = init_call(p->arena, line, expr, args);
+    } else {
+      // TODO: getters
+      break;
+    }
+  }
+  return expr;
+}
+
 static Expr *block(Parser *p) {
   if (match(p, TOKEN_LEFT_BRACE)) {
     int line = previous(p).line;
@@ -199,7 +226,7 @@ static Expr *block(Parser *p) {
     }
     return init_block(p->arena, line, exprs);
   }
-  return _or(p);
+  return call(p);
 }
 
 static Expr *function(Parser *p) {

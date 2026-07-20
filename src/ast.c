@@ -84,3 +84,10 @@ Expr *init_function(Arena *a, int line, ExprArray *params, Expr *body,
   function->as.function.arity = arity;
   return function;
 }
+
+Expr *init_call(Arena *a, int line, Expr *callee, ExprArray *args) {
+  Expr *call = init_expr(a, EXPR_CALL, line);
+  call->as.call.callee = callee;
+  call->as.call.args = args;
+  return call;
+}

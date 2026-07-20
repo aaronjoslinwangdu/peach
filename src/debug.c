@@ -115,9 +115,23 @@ void print_expr(Expr *expr, int indent) {
     printf("%*s}\n", indent, "");
     return;
   }
-  case EXPR_CALL:
-    printf("type = CALL }\n");
+  case EXPR_CALL: {
+    Call call = expr->as.call;
+    printf("type = CALL,\n%*scallee = ", indent + 2, "");
+    print_expr(call.callee, indent + 2);
+    if (call.args->count) {
+      printf("%*sargs = [\n", indent + 2, "");
+      for (int i = 0; i < call.args->count; i++) {
+        printf("%*sarg = ", indent + 4, "");
+        print_expr(call.args->entries[i], indent + 4);
+      }
+      printf("%*s],\n", indent + 2, "");
+    } else {
+      printf("%*sargs = []\n", indent + 2, "");
+    }
+    printf("%*s}\n", indent, "");
     return;
+  }
   case EXPR_VAR: {
     printf("type = VAR, name = %s }\n", expr->as.var.name);
     return;
@@ -146,9 +160,15 @@ void print_expr(Expr *expr, int indent) {
   case EXPR_BLOCK: {
     Block block = expr->as.block;
     printf("type = BLOCK,\n");
-    for (int i = 0; i < block.exprs->count; i++) {
-      printf("%*sexpr = ", indent + 2, "");
-      print_expr(block.exprs->entries[i], indent + 2);
+    if (block.exprs->count) {
+      printf("%*sexprs = [\n", indent + 2, "");
+      for (int i = 0; i < block.exprs->count; i++) {
+        printf("%*sexpr = ", indent + 4, "");
+        print_expr(block.exprs->entries[i], indent + 4);
+      }
+      printf("%*s],\n", indent + 2, "");
+    } else {
+      printf("%*sexprs = []\n", indent + 2, "");
     }
     printf("%*s}\n", indent, "");
     return;
@@ -156,9 +176,15 @@ void print_expr(Expr *expr, int indent) {
   case EXPR_FUNCTION: {
     Function function = expr->as.function;
     printf("type = FUNCTION, arity = %d,\n", function.arity);
-    for (int i = 0; i < function.params->count; i++) {
-      printf("%*sparam = ", indent + 2, "");
-      print_expr(function.params->entries[i], indent + 2);
+    if (function.params->count) {
+      printf("%*sparams = [", indent + 2, "");
+      for (int i = 0; i < function.params->count; i++) {
+        printf("%*sparam = ", indent + 4, "");
+        print_expr(function.params->entries[i], indent + 4);
+      }
+      printf("%*s],\n", indent + 2, "");
+    } else {
+      printf("%*sparams = [],\n", indent + 2, "");
     }
     printf("%*sbody = ", indent + 2, "");
     print_expr(function.body, indent + 2);
